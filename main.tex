@@ -1,0 +1,95 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\algblock{ParFor}{EndParFor}
+% customising the new block
+\algnewcommand\algorithmicparfor{\textbf{ParFor}}
+\algnewcommand\algorithmicpardo{\textbf{do}}
+\algnewcommand\algorithmicendparfor{\textbf{end\ ParFor}}
+\algrenewtext{ParFor}[1]{\algorithmicparfor\ #1\ \algorithmicpardo}
+\algrenewtext{EndParFor}{\algorithmicendparfor}
+
+% for numbered citations
+\usepackage{cite}
+% for figures based on pdfs
+\usepackage[pdftex]{graphicx}
+ 
+ % Ben's packages
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.13}
+\usepackage{times}
+\usepackage{listings}
+\graphicspath{ {images/} }
+
+
+\begin{document}
+
+\title{Enabling Usage of Parallelism In Python}
+\author{
+\IEEEauthorblockA{Benjamin James Gaska}
+\IEEEauthorblockA{Computer Science\\
+University of Arizona\\
+Tucson, Arizona\\
+Email: bengaska@email.arizona.edu}}
+
+\maketitle
+
+\begin{abstract}
+TEST
+\end{abstract}
+
+\section{Introduction}
+
+
+
+
+\section{Motivation}
+
+
+
+\subsection{Case Study: Parallelizing Orbital Code}
+
+
+
+\section{Survey}
+
+\section{Implementation}
+
+\section{Results}
+
+The ParPython implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code. 
+To this end, 100 benchmarks were chosen and and an attempt was made to parallelize it using only the ParPython loop parallelism model.
+
+The benchmarks were sampled from a larger set of benchmarks made up of the following:
+\begin{itemize}
+   \item Python Performance Suite\cite{pyPerformance}, a collection of benchmarks for comparison of Python implementations
+   \item Numpy Benchmark Suite\cite{numpyPerformance}, the official test suite for Numpy
+   \item Scikit-Learn Benchmarks \cite{scikit-learn}, the official benchmarks for the popular Python machine learning library
+   \item Natural Language Toolkit (NLTK) \cite{bird_2016}, a popular open-source codebase for natural language processing in Python.
+\end{itemize}
+These codebases were chosen because they represent a variety of code that include both implementation entirely in Python, as well as implementations that make significant calls to external C libraries. 
+They also represent comment tools used for dataset analysis in Python, and thus one of the major use cases of Python in scientific research.
+
+
+
+The benchmarks were then classified into one of four possible categories:
+\begin{enumerate}
+   \item No modification required beyond inserting ParFor,
+   \item some refactoring was required to implement using the ParFor, 
+   \item a large amount of refactoring of code logic was required to use ParFar,
+   \item or code could not be parallelized using ParFor.
+\end{enumerate}
+
+
+
+\section{Related Work}
+
+\section{Conclusions}
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{Thesis}
+\end{document}
