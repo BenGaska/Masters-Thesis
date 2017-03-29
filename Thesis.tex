@@ -45,8 +45,8 @@ Email: bengaska@email.arizona.edu}}
 
 %Paragraph 1, give problem. Scientific researchers like using high-level languages. We must work around their usage
 
-The amount of data available to researchers has exploded in recent years, 
-whole fields have arisen out of performing large dataset analysis.
+The amount of data available to researchers has exploded in recent years,
+whole fields are based in performing large dataset analysis.
 Bioinformatics research involves searching through terrabytes of genetic data
 to identify meaningful variations.\cite{bolstad2003comparison}
 Social sciences are performing analysis of millions of tweets to detect political trends in lieu of traditional surveying methods. 
@@ -98,33 +98,99 @@ highly performant languages.
 What is possible is making Python fast enough that it is not the 
 bottleneck for the researcher's work.
 This enables users to continue using Python, and the conveniences that 
-brings, without being a impediment to the data pipelines that underpin 
+brings, without excessively impeding the data pipelines that underpin 
 modern scientific research.
 In this way, we can enable researchers to perform their analysis
-faster with less effort. This can free researcher's time to
-do more.
+faster with less effort, freeing them to do more than they otherwise 
+could.
 
 \section{Motivation}
 
-Scientific analysis is often limited by their data
+Scientific analysis is often limited by their data processing pipeline.
+Across topics as varied as cancer research \cite{danford2016analyzing} and planetary science, (TODO: add arxiv paper)
+researchers are working with tools that are they are not able to make performant enough to satisfy their needs.
+This forces researchers to limit their work in some way, requiring coarser-grained analysis, analyzing less data than they would prefer,
+or even preventing some work from being done at all.
+Finding ways to circumvent these issues leads to improvement in
+many scientific endeavors.
+
+
+The Python Standard Library has two modules for parallelism:
+threading and multiprocessing, utilizing thread-based and 
+process-based parallelism respectively.
+The reference implementation of Python, CPython, famously has a 
+Global Interpreter Lock (GIL) which ensures that only one thread 
+has access to the interpreter at a given
+time.\cite{beazley2010understanding}
+This limits the performance improvements that can be achieved with
+threads.
+This necessitates working with heavyweight processes instead.
+
+The multiprocessing module requires the user to implement parallelism 
+either as a map or a task-worker queue. 
+Both of these abstractions can differ significantly from the for-loop 
+structure most familiar for Python users. 
+This can require significant refactoring of the serial code, cause 
+significant tangling of the parallel logic with the main algorithmic 
+logic, and require usage models that can be unfamiliar with many users.
+
+These issues create a significant impediment towards usage of parallelism in Python. 
+Even when the problem matches well with the parallel tools available 
+users can be discouraged from straying away from their serial 
+implementation.
+This is supported by survey data which shows that users tend to shy away from parallelism.
+(TODO: Need to clarify some things, will extend further with discussion of programmer's tendency to avoid parallelism)
+
+
+These challenges led us to create a new model that emphasizes ease of use.
+By presenting a simple interface to the user, we believe that they will
+be more likely to utilize parallelism in situations where they would have
+otherwise been discouraged from doing so. 
+By taking the job of performing the necessary transformation from
+the user we can also apply other techniques to optimize the loop-body.
+This allows for further improvements to be made to the code transformation
+process, without requiring the users to ever update their code. 
+
 
 \section{Implementation}
 
 The ParPython toolset is implemented as a single new ParFor object. 
-This object is placed by the user before a loop that they wish to have run in parallel. 
+The code's Abstract Syntax Tree (AST) is searched and the ParFor object
+is associated with the loop immediately succeeding it.
+Further analysis is done to identify what values created outside 
+of the for-loop is needed for the computation inside the for-loop.
+This information is combined with the information about which variables
+are needed, as well as an optional reduction.
+Tbe AST is then modfied to parallelize the loop, using the constructs available in the standard library. 
+The transformed loop is exactly equivalent to the original serial construct, requiring no modification of any code outside of the 
+parallelized loop to ensure correctness of the overall program.
+
+Figure \ref{basicExample} shows a simple example of a singly-nested loop
+which process the items in a collection and appends them to a list for 
+further use somewhere later in the code.
+Parallelization is indicated by the user explicitly by placing a ParFor 
+object before the loop to be run in parallel.
 The user passes into the ParFor constructor the variables they wish to have returned from the loop body.
-Then, before runtime the Abstract Syntax Tree is transformed by ParPython to produce code that uses the built-in Python parallel constructs.
-Figure \ref{basicExample} shows a simple example of a singly-nested loop which build up two lists of values.
+Then, before runtime the Abstract Syntax Tree is transformed by ParPython
+to produce code that uses the built-in Python parallel constructs.
+Arbitrary code can be used within the for-loop body, and there are no
+limitations on how the body of the for-loop is written.
+
+
+%Discuss AST analysis to determine which variables are necessary for 
+%computing the output
+
+%Discuss optional reductions
+
 The only difference between the serial implementation and the ParPython implementation is the introduction of the ParFor object.
 
 \begin{figure}[t]
 \begin{lstlisting}[frame=single]
-ParFor(output=(x,y))
-for i in values:
-    x.append(computeXValues(i))
-    y.append(computeYValues(i))
+ParFor(output=(x))
+for i in collection:
+    x.append(processValue(i))
 \end{lstlisting}
-\caption{Simple example of parallelizing a for loop using Parfor. The loop builds up lists x and y by performing some computation on each value in the given collection of values.}
+\caption{Simple example of parallelizing a for loop using Parfor. The loop builds up lists x by performing some computation on each value in the given collection of values.}
 \label{basicExample}
 \end{figure}
 
@@ -183,22 +249,28 @@ the benchmarks were classified into one of three possible categories:
 
 \subsection{Performance}
 
+PLACEHOLDER
 
 
 
 
+\section{Related Work}
 
-%\section{Related Work}
+PLACEHOLDER 
+%PyMP\cite{pymp} is a library for Python that allows parallel iterators 
+%in Unix environments. 
+%It relies on making direct calls to the fork() system 
+%call, and is not compatible with non-Unix environments. 
+%Further, it does not support reductions and can require 
+%non-trivial rewrites of the serial code to fit within the model.
 
-%Beazley \cite{beazley2010understanding} provides an excellent overview to the problems Python's GIL causes for multithreading.
+%Danford and Welch\cite{danford2016analyzing} takes a pre-existing
 
-%PyMP\cite{pymp} is an library for Python that allows parallel iterators 
-%Unix environments. It relies on making direct calls to the fork() system 
-%call, and is not compatible with non-Unix environments. Further, it does
-%not support reductions and requires rewriting the serial code to fit with
-%the model.
 
 \section{Conclusions}
+
+PLACEHOLDER
+
 
 
 \bibliographystyle{IEEEtran}
