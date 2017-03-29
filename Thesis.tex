@@ -38,54 +38,162 @@ Email: bengaska@email.arizona.edu}}
 \maketitle
 
 \begin{abstract}
-TEST
+
 \end{abstract}
 
 \section{Introduction}
+
+%Paragraph 1, give problem. Scientific researchers like using high-level languages. We must work around their usage
+Scientific researchers increasingly depend on computers to perform
+the analysis necessary for their work.
+As the amount of data involved with research increases
+scientists have become dependent upon their programming 
+abilities to perform their work.
+Several high-level programming languages have become very popular among scientists, in particular SQL, SAS, R, and Python.\cite{kdnuggetSurvey}
+Each of these languages provide conveniences that aid the programmer 
+greatly in their task.
+
+
+%Paragraph 2: Talk about usage of Python specifically?
+Python in particular has quickly grown to be one of the most popular general purpose programming languages.
+It is one of the most popular languages in use today for data 
+analytics, both in raw number of users\cite{kdnuggetSurvey} and rate 
+of growth of its user base.\cite{kdnuggetGrowthSurvey}
+This popularity comes despite the fact that Python is quite slow.
+Runtime comparisons of bioinformatic algorithms
+show Python to be, on average, an order of magnitude slower than 
+compiled languages such as C/C++ and Java. \cite{fourment2008comparison}
+Long runtimes can lead to Python becoming infeasible
+for computationally expensive analyses.
+
+ParPython is a way to overcome the runtime bottleneck by enabling
+easy usage of parallelism in the language. 
+Inspired by OpenMP's pragma-based model\cite{dagum1998openmp}, 
+ParPython allows users to specify which loops to parallelize. 
+The specified loops are than
+transformed to use the parallel tools available in Python. 
+This is designed to minimally interfere with the underlying code logic.
+Allowing users to place parallelism without having to significantly alter
+the serial code.
+
+This paper presents the following contributions: 
+\begin{enumerate}
+    \item ParPython a novel tool for transformation of serial Python code
+    into parallel code,
+    \item a survey of research scientist's programming habits, the
+    bottlenecks they face and evidence that the ParPython model is 
+    preferred over other parallelization options in Python,
+    \item comparison of ParPython performance in a variety of 
+    common Python benchmarks and libraries,
+    \item a case study evaluating the usage of ParPython in
+    a real-world planetary science codebase. 
+\end{enumerate}
+
+It is difficult to overcome the slowness of Python relative to
+highly performant languages.
+What is possible is making Python fast enough that it is not the 
+bottleneck for scientists work.
+This enables users to continue using Python, and the conveniences that 
+brings, without being a impediment to the data pipelines that underpin 
+modern scientific research.
+In this way, we can enable scientists to spend less time programming and 
+more time doing their research.
+
+
+%Talk about survey 
+
+%Give an outline
 
 
 
 
 \section{Motivation}
 
-
-
-\subsection{Case Study: Parallelizing Orbital Code}
-
-
-
-\section{Survey}
+Scientific analysis is often limited by their data
 
 \section{Implementation}
 
+The ParPython toolset is implemented as a single new ParFor object. 
+This object is placed by the user before a loop that they wish to have run in parallel. 
+The user passes into the ParFor constructor the variables they wish to have returned from the loop body.
+Then, before runtime the Abstract Syntax Tree is transformed by ParPython to produce code that uses the built-in Python parallel constructs.
+Figure \ref{basicExample} shows a simple example of a singly-nested loop which build up two lists of values.
+The only difference between the serial implementation and the ParPython implementation is the introduction of the ParFor object.
+
+\begin{figure}[t]
+\begin{lstlisting}[frame=single]
+ParFor(output=(x,y))
+for i in values:
+    x.append(computeXValues(i))
+    y.append(computeYValues(i))
+\end{lstlisting}
+\caption{Simple example of parallelizing a for loop using Parfor. The loop builds up lists x and y by performing some computation on each value in the given collection of values.}
+\label{basicExample}
+\end{figure}
+
 \section{Results}
 
-The ParPython implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code. 
+The ParPython implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code.
 To this end, 100 benchmarks were chosen and and an attempt was made to parallelize it using only the ParPython loop parallelism model.
 
 The benchmarks were sampled from a larger set of benchmarks made up of the following:
 \begin{itemize}
    \item Python Performance Suite\cite{pyPerformance}, a collection of benchmarks for comparison of Python implementations
-   \item Numpy Benchmark Suite\cite{numpyPerformance}, the official test suite for Numpy
+   \item Numpy Benchmark Suite\cite{numpyPerformance}, the official test suite for Numpy 
    \item Scikit-Learn Benchmarks \cite{scikit-learn}, the official benchmarks for the popular Python machine learning library
-   \item Natural Language Toolkit (NLTK) \cite{bird_2016}, a popular open-source codebase for natural language processing in Python.
+   \item Natural Language Toolkit (NLTK) \cite{bird_2016}, an 
+   open-source codebase for natural language processing in Python.
 \end{itemize}
-These codebases were chosen because they represent a variety of code that include both implementation entirely in Python, as well as implementations that make significant calls to external C libraries. 
-They also represent comment tools used for dataset analysis in Python, and thus one of the major use cases of Python in scientific research.
+These were chosen because they represent a broad variety of code. 
+This include implementation entirely in Python, and implementations 
+that have a significant portion of its computation performed by calls to external C code.
+CPython's native interfacing with C code makes the latter a particularly common usage case.
+Further, Numpy, Scikit-Learn, and NLTK represent popular libraries for dataset analysis and scientific programming in Python.
 
 
+ParPython was evaluated on the code in two ways. The first is how
+easy it was to use ParPython with the pre-existing code, as well as 
+determining in which use cases ParPython was able to 
+parallelize the code at all.
+The second takes the code the was able to be parallelized using our method and compares improvements in runtime of code.
 
-The benchmarks were then classified into one of four possible categories:
+\subsection{Ease of Implementation}
+
+The core goal of the ParPython project is as simple an interface for specifying parallelism as possible. To this end, 
+the benchmarks were classified into one of three possible categories:
 \begin{enumerate}
    \item No modification required beyond inserting ParFor,
-   \item some refactoring was required to implement using the ParFor, 
-   \item a large amount of refactoring of code logic was required to use ParFar,
+   \item some refactoring was required to implement using the ParFor,
    \item or code could not be parallelized using ParFor.
 \end{enumerate}
 
 
 
+%\begin{tikzpicture}
+%\begin{axis}[
+%	ylabel=\# of Benchmarks,
+%	enlargelimits=0.05,
+%	legend style={at={(0.5,-0.1)},
+%	anchor=north,legend columns=-1},
+%	ybar interval=0.7,
+%]
+%\addplot 
+%	coordinates {(,388950) (2011,393007) 
+%		(2010,398449) (2009,395972) (2008,398866)};
+%\legend{}
+%\end{axis}
+%\end{tikzpicture}
+
+\subsection{Performance}
+
+
+
+
+
+
 \section{Related Work}
+
+Beazley \cite{beazley2010understanding} provides an excellent overview to the problems Python's GIL causes for multithreading.
 
 \section{Conclusions}
 
