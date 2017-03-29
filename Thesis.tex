@@ -44,27 +44,31 @@ Email: bengaska@email.arizona.edu}}
 \section{Introduction}
 
 %Paragraph 1, give problem. Scientific researchers like using high-level languages. We must work around their usage
-Scientific researchers increasingly depend on computers to perform
-the analysis necessary for their work.
-As the amount of data involved with research increases
-scientists have become dependent upon their programming 
-abilities to perform their work.
-Several high-level programming languages have become very popular among scientists, in particular SQL, SAS, R, and Python.\cite{kdnuggetSurvey}
-Each of these languages provide conveniences that aid the programmer 
-greatly in their task.
 
+The amount of data available to researchers has exploded in recent years, 
+whole fields have arisen out of performing large dataset analysis.
+Bioinformatics research involves searching through terrabytes of genetic data
+to identify meaningful variations.\cite{bolstad2003comparison}
+Social sciences are performing analysis of millions of tweets to detect political trends in lieu of traditional surveying methods. 
+\cite{cody2016public}
+Literary critics are building models of history of the novel through analysis of millions of books over hundreds of years.\cite{moretti2005graphs}
+These users are searching for tools that enable them to quickly perform their 
+with minimal effort.
+The programming language chosen, and the libraries available in the language, 
+has the most direct impact upon the user's work.
 
-%Paragraph 2: Talk about usage of Python specifically?
+Several high-level programming languages have become very popular data analysis tasks, in particular SAS, R, and Python.\cite{kdnuggetSurvey}
 Python in particular has quickly grown to be one of the most popular general purpose programming languages.
 It is one of the most popular languages in use today for data 
-analytics, both in raw number of users\cite{kdnuggetSurvey} and rate 
+analysis, both in raw number of users\cite{kdnuggetSurvey} and rate 
 of growth of its user base.\cite{kdnuggetGrowthSurvey}
 This popularity comes despite the fact that Python is quite slow.
 Runtime comparisons of bioinformatic algorithms
 show Python to be, on average, an order of magnitude slower than 
-compiled languages such as C/C++ and Java. \cite{fourment2008comparison}
+compiled languages such as C/C++ and Java.\cite{fourment2008comparison}
 Long runtimes can lead to Python becoming infeasible
 for computationally expensive analyses.
+
 
 ParPython is a way to overcome the runtime bottleneck by enabling
 easy usage of parallelism in the language. 
@@ -86,26 +90,19 @@ This paper presents the following contributions:
     \item comparison of ParPython performance in a variety of 
     common Python benchmarks and libraries,
     \item a case study evaluating the usage of ParPython in
-    a real-world planetary science codebase. 
+    a real-world planetary science code. 
 \end{enumerate}
 
 It is difficult to overcome the slowness of Python relative to
 highly performant languages.
 What is possible is making Python fast enough that it is not the 
-bottleneck for scientists work.
+bottleneck for the researcher's work.
 This enables users to continue using Python, and the conveniences that 
 brings, without being a impediment to the data pipelines that underpin 
 modern scientific research.
-In this way, we can enable scientists to spend less time programming and 
-more time doing their research.
-
-
-%Talk about survey 
-
-%Give an outline
-
-
-
+In this way, we can enable researchers to perform their analysis
+faster with less effort. This can free researcher's time to
+do more.
 
 \section{Motivation}
 
@@ -134,7 +131,7 @@ for i in values:
 \section{Results}
 
 The ParPython implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code.
-To this end, 100 benchmarks were chosen and and an attempt was made to parallelize it using only the ParPython loop parallelism model.
+To this end, 40 benchmarks were chosen and an attempt was made to parallelize it using only the ParPython parallelism model.
 
 The benchmarks were sampled from a larger set of benchmarks made up of the following:
 \begin{itemize}
@@ -191,9 +188,15 @@ the benchmarks were classified into one of three possible categories:
 
 
 
-\section{Related Work}
+%\section{Related Work}
 
-Beazley \cite{beazley2010understanding} provides an excellent overview to the problems Python's GIL causes for multithreading.
+%Beazley \cite{beazley2010understanding} provides an excellent overview to the problems Python's GIL causes for multithreading.
+
+%PyMP\cite{pymp} is an library for Python that allows parallel iterators 
+%Unix environments. It relies on making direct calls to the fork() system 
+%call, and is not compatible with non-Unix environments. Further, it does
+%not support reductions and requires rewriting the serial code to fit with
+%the model.
 
 \section{Conclusions}
 
