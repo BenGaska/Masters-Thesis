@@ -27,7 +27,7 @@
 
 \begin{document}
 
-\title{Enabling Usage of Parallelism In Python}
+\title{ParForPy: Loop Parallelism in Python}
 \author{
 \IEEEauthorblockA{Benjamin James Gaska}
 \IEEEauthorblockA{Computer Science\\
@@ -48,48 +48,73 @@ Email: bengaska@email.arizona.edu}}
 The amount of data available to researchers has exploded in recent years,
 whole fields are based in performing large dataset analysis.
 Bioinformatics research involves searching through terrabytes of genetic data
-to identify meaningful variations.\cite{bolstad2003comparison}
+to identify meaningful variations\cite{bolstad2003comparison}.
 Social sciences are performing analysis of millions of tweets to detect political trends in lieu of traditional surveying methods. 
 \cite{cody2016public}
-Literary critics are building models of history of the novel through analysis of millions of books over hundreds of years.\cite{moretti2005graphs}
-These users are searching for tools that enable them to quickly perform their 
-with minimal effort.
+Literary critics are building models of history of the novel through analysis of millions of books over hundreds of years\cite{moretti2005graphs}.
+These users are searching for tools that enable them to quickly perform 
+their analyses with minimal effort.
 The programming language chosen, and the libraries available in the language, 
-has the most direct impact upon the user's work.
+have the most direct impact upon the user's work.
 
-Several high-level programming languages have become very popular data analysis tasks, in particular SAS, R, and Python.\cite{kdnuggetSurvey}
-Python in particular has quickly grown to be one of the most popular general purpose programming languages.
-It is one of the most popular languages in use today for data 
-analysis, both in raw number of users\cite{kdnuggetSurvey} and rate 
-of growth of its user base.\cite{kdnuggetGrowthSurvey}
+Several high-level programming languages have become popular data analysis tasks, in particular SAS\cite{sas2004sas}, R\cite{team2000r}, and Python\cite{vanrossum2010python} have grown to dominate data analysis\cite{kdnuggetSurvey}.
+Python in particular has grown to be one of the most popular general purpose programming languages, both in raw number of users\cite{kdnuggetSurvey} and rate 
+of growth of its user base\cite{kdnuggetGrowthSurvey}.
 This popularity comes despite the fact that Python is quite slow.
 Runtime comparisons of bioinformatic algorithms
 show Python to be, on average, an order of magnitude slower than 
-compiled languages such as C/C++ and Java.\cite{fourment2008comparison}
+compiled languages such as C/C++ and Java\cite{fourment2008comparison}.
 Long runtimes can lead to Python becoming infeasible
 for computationally expensive analyses.
 
+Parallelism is a way to break through the processing bottleneck,
+but Python has limited support for for parallelism.
+The reference implementation of Python, CPython, has a 
+Global Interpreter Lock (GIL) which ensures that only one thread 
+has access to the interpreter at a given
+time.\cite{beazley2010understanding}
+This significantly impedes the usage of many types of parallelism.
+If multiple threads are used, then all but one will block and wait for the
+GIL to allow them to execute. 
+This effectively kills the usefulness of threads as a means to improve
+computation time.
 
-ParPython is a way to overcome the runtime bottleneck by enabling
+
+Useful parallelism in Python is thus implemented as processes, which spawn
+of their own data and interpreter and thus are free of restrictions of the GIL.
+The multiprocessing module requires the user to implement parallelism 
+either as a map or a task-worker queue. 
+Both of these abstractions can differ significantly from the for-loop 
+structure most familiar for Python users. 
+This can require refactoring of the serial code, cause 
+tangling of the parallel logic with the main algorithmic 
+logic, and require usage models that can be unfamiliar with many users.
+These issues create a significant impediment towards usage of parallelism in Python. 
+Even when the problem matches well with the parallel tools available 
+users can be discouraged from straying away from their serial 
+implementation.
+
+ParForPy is a way to overcome the runtime bottleneck by enabling
 easy usage of parallelism in the language. 
 Inspired by OpenMP's pragma-based model\cite{dagum1998openmp}, 
-ParPython allows users to specify which loops to parallelize. 
+ParForPy allows users to specify which loops to parallelize. 
 The specified loops are than
 transformed to use the parallel tools available in Python. 
 This is designed to minimally interfere with the underlying code logic.
-Allowing users to place parallelism without having to significantly alter
-the serial code.
+This allows users to indicate loop-level parallelism without having to
+significantly alter the serial code.
+
 
 This paper presents the following contributions: 
 \begin{enumerate}
-    \item ParPython a novel tool for transformation of serial Python code
+    \item ParForPy a novel tool for transformation of serial Python code
     into parallel code,
-    \item a survey of research scientist's programming habits, the
-    bottlenecks they face and evidence that the ParPython model is 
+    \item A survey of research scientist's programming habits, the
+    bottlenecks they face and evidence that the ParForPy model is 
     preferred over other parallelization options in Python,
-    \item comparison of ParPython performance in a variety of 
+    \item Comparison of ParForPy performance in a variety of 
     common Python benchmarks and libraries,
-    \item a case study evaluating the usage of ParPython in
+    \item A case study evaluating the usage of ParForPy in
     a real-world planetary science code. 
 \end{enumerate}
 
@@ -104,57 +129,48 @@ In this way, we can enable researchers to perform their analysis
 faster with less effort, freeing them to do more than they otherwise 
 could.
 
-\section{Motivation}
+%\section{Motivation}
 
-Scientific analysis is often limited by their data processing pipeline.
-Across topics as varied as cancer research \cite{danford2016analyzing} and planetary science, (TODO: add arxiv paper)
-researchers are working with tools that are they are not able to make performant enough to satisfy their needs.
-This forces researchers to limit their work in some way, requiring coarser-grained analysis, analyzing less data than they would prefer,
-or even preventing some work from being done at all.
-Finding ways to circumvent these issues leads to improvement in
-many scientific endeavors.
-
-
-The Python Standard Library has two modules for parallelism:
-threading and multiprocessing, utilizing thread-based and 
-process-based parallelism respectively.
-The reference implementation of Python, CPython, famously has a 
-Global Interpreter Lock (GIL) which ensures that only one thread 
-has access to the interpreter at a given
-time.\cite{beazley2010understanding}
-This limits the performance improvements that can be achieved with
-threads.
-This necessitates working with heavyweight processes instead.
-
-The multiprocessing module requires the user to implement parallelism 
-either as a map or a task-worker queue. 
-Both of these abstractions can differ significantly from the for-loop 
-structure most familiar for Python users. 
-This can require significant refactoring of the serial code, cause 
-significant tangling of the parallel logic with the main algorithmic 
-logic, and require usage models that can be unfamiliar with many users.
-
-These issues create a significant impediment towards usage of parallelism in Python. 
-Even when the problem matches well with the parallel tools available 
-users can be discouraged from straying away from their serial 
-implementation.
-This is supported by survey data which shows that users tend to shy away from parallelism.
-(TODO: Need to clarify some things, will extend further with discussion of programmer's tendency to avoid parallelism)
+%Scientific analysis is often limited by their data processing pipeline.
+%Across topics as varied as cancer research \cite{danford2016analyzing} %and planetary science, (TODO: add arxiv paper)
+%researchers are working with tools that are they are not able to make performant enough to satisfy their needs.
+%This forces researchers to limit their work in some way, requiring coarser-grained analysis, analyzing less data than they would prefer,
+%or even preventing some work from being done at all.
+%Finding ways to circumvent these issues leads to improvement in
+%many scientific endeavors.
 
 
-These challenges led us to create a new model that emphasizes ease of use.
-By presenting a simple interface to the user, we believe that they will
-be more likely to utilize parallelism in situations where they would have
-otherwise been discouraged from doing so. 
-By taking the job of performing the necessary transformation from
-the user we can also apply other techniques to optimize the loop-body.
-This allows for further improvements to be made to the code transformation
-process, without requiring the users to ever update their code. 
+%The Python Standard Library has two modules for parallelism:
+%threading and multiprocessing, utilizing thread-based and 
+%process-based parallelism respectively.
+
+%This limits the performance improvements that can be achieved with
+%threads.
+%This necessitates working with heavyweight processes instead.
+
+%The multiprocessing module requires the user to implement parallelism 
+%either as a map or a task-worker queue. 
+%Both of these abstractions can differ significantly from the for-loop 
+%structure most familiar for Python users. 
+%This can require significant refactoring of the serial code, cause 
+%significant tangling of the parallel logic with the main algorithmic 
+%logic, and require usage models that can be unfamiliar with many users.
+
+%These issues create a significant impediment towards usage of parallelism in Python. 
+%Even when the problem matches well with the parallel tools available 
+%users can be discouraged from straying away from their serial 
+%implementation.
+%This is supported by survey data which shows that users tend to shy away %(TODO: Need to clarify some things, will extend further with discussion of programmer's tendency to avoid parallelism)
+
+
 
 
 \section{Implementation}
 
-The ParPython toolset is implemented as a single new ParFor object. 
+The goal of ParForPy is to make the programmer responsible for identifying parallelism, 
+allowing for an automatic transformation of the indicated for-loop. 
+The ParForPy toolset is implemented as a single new ParFor object. 
+
 The code's Abstract Syntax Tree (AST) is searched and the ParFor object
 is associated with the loop immediately succeeding it.
 Further analysis is done to identify what values created outside 
@@ -171,24 +187,17 @@ further use somewhere later in the code.
 Parallelization is indicated by the user explicitly by placing a ParFor 
 object before the loop to be run in parallel.
 The user passes into the ParFor constructor the variables they wish to have returned from the loop body.
-Then, before runtime the Abstract Syntax Tree is transformed by ParPython
+Then, before runtime the Abstract Syntax Tree is transformed by ParForPy
 to produce code that uses the built-in Python parallel constructs.
-Arbitrary code can be used within the for-loop body, and there are no
-limitations on how the body of the for-loop is written.
 
 
-%Discuss AST analysis to determine which variables are necessary for 
-%computing the output
-
-%Discuss optional reductions
-
-The only difference between the serial implementation and the ParPython implementation is the introduction of the ParFor object.
+The only difference between the serial implementation and the ParForPy implementation is the introduction of the ParFor object.
 
 \begin{figure}[t]
 \begin{lstlisting}[frame=single]
 ParFor(output=(x))
 for i in collection:
-    x.append(processValue(i))
+    x.append(processXValue(i))
 \end{lstlisting}
 \caption{Simple example of parallelizing a for loop using Parfor. The loop builds up lists x by performing some computation on each value in the given collection of values.}
 \label{basicExample}
@@ -196,16 +205,15 @@ for i in collection:
 
 \section{Results}
 
-The ParPython implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code.
-To this end, 40 benchmarks were chosen and an attempt was made to parallelize it using only the ParPython parallelism model.
+The ParForPy implementation strives for simplicity, ease of use, and minimal difference between the serial and parallel code.
+To this end, 40 benchmarks were chosen and an attempt was made to parallelize it using only the ParForPy parallelism model.
 
 The benchmarks were sampled from a larger set of benchmarks made up of the following:
 \begin{itemize}
    \item Python Performance Suite\cite{pyPerformance}, a collection of benchmarks for comparison of Python implementations
-   \item Numpy Benchmark Suite\cite{numpyPerformance}, the official test suite for Numpy 
-   \item Scikit-Learn Benchmarks \cite{scikit-learn}, the official benchmarks for the popular Python machine learning library
    \item Natural Language Toolkit (NLTK) \cite{bird_2016}, an 
    open-source codebase for natural language processing in Python.
+   \item A selection of bioinformatics code use by scientific researchers
 \end{itemize}
 These were chosen because they represent a broad variety of code. 
 This include implementation entirely in Python, and implementations 
@@ -214,53 +222,196 @@ CPython's native interfacing with C code makes the latter a particularly common 
 Further, Numpy, Scikit-Learn, and NLTK represent popular libraries for dataset analysis and scientific programming in Python.
 
 
-ParPython was evaluated on the code in two ways. The first is how
-easy it was to use ParPython with the pre-existing code, as well as 
-determining in which use cases ParPython was able to 
-parallelize the code at all.
+ParForPy was evaluated on the code in two ways. First, we look at SLOC between
+the ParForPy implementation, the serial implementation and a hand parallelized implementation.
 The second takes the code the was able to be parallelized using our method and compares improvements in runtime of code.
 
-\subsection{Ease of Implementation}
+\begin{figure}[t]
+\begin{tikzpicture}
+\centering
+\begin{axis}[
+    ybar,
+    %enlargelimits=0.15,
+    legend style={at={(0.5,-0.15)},
+      anchor=north,legend columns=-1},
+    ylabel={SLOC},
+    symbolic x coords={Mandelbrot, PESS, KMeans},
+    xtick=data,
+    %nodes near coords,
+    nodes near coords align={vertical},
+    ]
+\addplot 
+	coordinates {(Mandelbrot,21)(PESS,239)(KMeans,126)};
+\addplot 
+	coordinates {(Mandelbrot,23)(PESS,241)(KMeans,128)};
+\addplot
+    coordinates {(Mandelbrot,32)(PESS,254)(KMeans,137)};
+    
+\legend{Serial,ParForPy, Manual Parallelism}
+\end{axis}
+\end{tikzpicture}
+\caption{Source Lines of Code comparison against different implementations.
+The ParForPy implementation stays very close to the serial implementation. While,
+the manual implementation tends to be slightly higher.}
+\label{slocchart}
+\end{figure}
 
-The core goal of the ParPython project is as simple an interface for specifying parallelism as possible. To this end, 
-the benchmarks were classified into one of three possible categories:
-\begin{enumerate}
-   \item No modification required beyond inserting ParFor,
-   \item some refactoring was required to implement using the ParFor,
-   \item or code could not be parallelized using ParFor.
-\end{enumerate}
+\subsection{Mandelbrot Set}
+
+Computing the Mandelbrot Set is a common introductory programming task for parallel
+computing.
+Each row of the final image can be computed separately from every other,
+making it a simple to parallelize task, with low concern for workload imbalance.
+We choose to use this as a baseline and proof of concept for the ParForPy model.
+
+Testing was done by generating a 1,000 x 1,000 pixel image, where each pixel was drawn by
+calculating the Mandelbrot sequence out to 10,000 iterations.
+Figure \ref{SpeedUpResults} shows the speed-up as the number of processes used increases.
+As the number of processes increases to 10 the results are as expected. 
+We see near 1-to-1 gains of speed-up to number of processes.
+After 10 though the gains fall off almost completely.
+
+This is important to note. 
+There is not an obvious hardware limitation leading to this, there are 12 cores available for use and so we should expect gains up until that point. 
+We will see with the other experiments done that extreme fall-off in improvements occurs 
+at 10 processes as well.
+This gives possible insight into a further restriction of the Python multiprocessing toolset. 
+That some aspect of the overhead beings to spike at this point, limiting gains beyond this point.
+This seems to effectively limit our possible scaling in a Python implementation.
+
+\subsection{Protein Folding}
+
+Protein Empirical Structure Space (PESS) is a codebase for performing protein
+threading and classification\cite{middleton2016complete}. 
+It is written in Python, making calls to an external C library for the
+most computationally expensive parts of the process.
+This mixing of Python and C code is common in scientific computing, due to CPython's 
+ability to natively interop with C\cite{pythonCInterop}.
+
+Data is read in as a series of Fasta strings, a file format for representing 
+nucleotide sequences as character string.
+Each of these can be evaluated independently of each other.
+Each nucleotide sequence takes between 5 and 10 minutes to process, with
+the largest portion of time taking place in the call to the external C code.
+This minimizes the amount of time spent managing the subprocesses, and maximizes
+the amount of time that each process can spend evaluation the sequence without 
+any communication to the process manager.
+This matches well with the restraints of Python multiprocessing.
+
+Testing was done on a set of 20 nucleotide sequences.
+In figure \ref{SpeedUpResults} we can see the Speed-Up as the number of processes
+used increases.
+The parallelism scales well to increases in the number of processes used, with
+the speed-up improving at a close to 1-to-1 rate.
+Noise is seen in the scaling, which is a result of the varying analysis time
+needed for different nucleotide sequences. 
+This is an underlying feature of the data that cannot be known until after performing 
+analysis.
+Because the major aspects of the computation are done in a pre-compiled C library further
+optimization of this imbalance is not possible without fundamentally changing PESS.
+In general, this case of parallelizing a large amount of independent tasks seems well fit to the ParForPy model.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    xlabel = {\# of Processes},
+    ylabel = {Speed-Up},
+    xmin=0, xmax=13,
+    ymin=0, ymax=12,
+    xtick={0,1,2,3,4,5,6,7,8,9,10,11,12},
+    legend pos=north west,
+    ymajorgrids=true,
+    grid style=dashed,
+]
+ 
+\addplot[
+    color=blue,
+    mark=square,
+    ]
+    coordinates {
+    (1,1)(2,1.77)(3,2.81)(4,3.79)(5,5.36)(6,5.59)(7,6.539)
+    (8,6.91)(9,7.87)(10,7.94)(11, 8.52)(12,9.05)
+    };
+    
+    \addplot[
+    color=red,
+    mark=diamond
+    ]
+    coordinates {
+    (1,1)(2,1.95)(3,2.89)(4,3.75)(5,4.48)(6,5.30)(7,6.11)(8,6.83)(9,7.75)(10,8.73)(11,8.99)(12,8.80)
+   };
+     \legend{Protein Folding, Mandelbrot, }
+     
+\end{axis}
+\end{tikzpicture}
+\caption{Comparison of Speed-Up for each of the experiments discussed.}
+\label{SpeedUpResults}
+\end{figure}
 
 
-
-%\begin{tikzpicture}
-%\begin{axis}[
-%	ylabel=\# of Benchmarks,
-%	enlargelimits=0.05,
-%	legend style={at={(0.5,-0.1)},
-%	anchor=north,legend columns=-1},
-%	ybar interval=0.7,
-%]
-%\addplot 
-%	coordinates {(,388950) (2011,393007) 
-%		(2010,398449) (2009,395972) (2008,398866)};
-%\legend{}
-%\end{axis}
-%\end{tikzpicture}
-
-\subsection{Performance}
-
-PLACEHOLDER
+\subsection{Naive Bayes Classification}
 
 
+%\subsubsection{Perceptron}
 
+
+\subsection{K-Means Clustering}
+
+K-Means\cite{forgy1965cluster} is an algorithm for unsupervised machine learning. 
+Unlike the previous Naive Bayes model, no prior labeling of the data is required.
+Instead, unsupervised learning attempts to derive natural clusters from 
+the data without any external label.
+This saves users the task of having to hand-label all training data 
+beforehand, allowing for application on much larger datasets than would 
+otherwise be possible.
+
+The algorithm consists of taking data that is represented as a series of vectors.
+The user chooses ahead of time a number of clusters they wish to be computed, in
+our testing case 20 clusters were chosen. 
+Then, a number of data points equal to the number of clusters are chosen at random,
+these are the initial configuration of centroids for the algorithm.
+Now for each iteration of the algorithm each data point is clustered with its
+closest centroid.
+Once all data is associated with a centroid, new centroids are created which are the
+average of all of the vectors in that cluster.
+This process is then repeated until the data converges and no data points change clusters
+between iterations.
+It is simple to understand and to implement and so has remained  a popular clustering technique.
+
+With K-Means the number of iterations that occur cannot be known ahead of time, it runs
+until convergence occurs. 
+Each iteration directly depends on the results of the previous iteration and so we cannot parallelize over this dimension of the iteration space.
+Parallelization instead occurs over the update portion of the algorithm, when each data 
+point is compared against each centroid and sorted into a cluster.
+At this point, each centroid is fixed and each data point can be assigned to a cluster
+independently of one another.
+
+Testing was done using the Newsgroup20 corpus, and each document was represented as a 
+vector of word counts.
+Figure \ref{SpeedUpResults} shows speed-up as number of processes was increased.
+Compared to the Mandlebrot and Protein Folding codes K-means sees less improvement from parallelization.
+With those two we have a fair amount of computation that is divided among the subprocesses once.
+This minimizes the cost of overhead, as the communication only needs to be done
+once to divide work and once to collect results, the time spent on computation
+is significantly greater than the time spent doing this communications.
+
+With K-Means we must make a parallel call on each iteration, and each process is doing 
+a relatively small amount of computation, as it simply compares each data point
+to each of the 20 centroids and chooses the closest. 
+Gains occur but they are more heavily impacted by the communication costs required by 
+this action.
+This particularly impacts scaling, as communication across more processes adds more and
+more overhead dampening the possible runtime improvements as the number of processes used
+increases.
 
 \section{Related Work}
 
 PLACEHOLDER 
 %PyMP\cite{pymp} is a library for Python that allows parallel iterators 
 %in Unix environments. 
-%It relies on making direct calls to the fork() system 
-%call, and is not compatible with non-Unix environments. 
+%It relies on making direct calls to the fork() system  k
+%call, and is not compatible with non-Unix environments. t
 %Further, it does not support reductions and can require 
 %non-trivial rewrites of the serial code to fit within the model.
 
