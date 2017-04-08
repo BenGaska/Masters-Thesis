@@ -3,6 +3,7 @@
 \usepackage{algorithmicx}
 \usepackage[noend]{algpseudocode}
 \usepackage[ruled,vlined]{algorithm2e}
+\usepackage[]{array}
 
 \algblock{ParFor}{EndParFor}
 % customising the new block
@@ -226,6 +227,39 @@ ParForPy was evaluated on the code in two ways. First, we look at SLOC between
 the ParForPy implementation, the serial implementation and a hand parallelized implementation.
 The second takes the code the was able to be parallelized using our method and compares improvements in runtime of code.
 
+
+\subsection{Source Lines of Code}
+
+ParForPy works by taking a loop that is known to us and transforming the loop body
+into a function call that can be used with the parallel tools that Python has available.
+Because of this the manual implementation of parallelism for each code is not too 
+significant of a change in SLOC.
+The hand transformation involves factoring out loop bodies into a worker or function call.
+This does not often translate to an overall huge change in the SLOC.
+Figure \ref{slocchart} shows this clearly, with an approximately linear difference
+between the serial and manually implemented versions.
+This depends on the number of spots being parallelized, and so when the PESS implementation parallelizes in two places this about doubles the SLOC difference.
+This is also true with the ParForPy version which consists of a single line of additional
+code.
+
+The more significant change is often to the structure of the code itself.
+The programmer implements the parallelism either as a worker function or a function that
+is mapped over the data.
+It also means setting up a pool of workers, building a queue of tasks that the manager will give to workers, and joining the processes after the computation is completed.
+This leads to the user having to implement non-trivial refactoring of their code. 
+Further, this necessitates an extensive tangling of the requirements for parallelism with
+the actual computation that is being specified. 
+
+In many cases this can lead the user to avoiding using parallelism.
+Even if parallelism is manually implemented the integration of parallel code and 
+the cognitive overhead of the additional function names can negatively impact 
+the ability to reason over their code.
+There is also added difficulty for future users of the code, who have an extra mechanic 
+that they must understand in conjunction with the actual computation occurring.
+This does not map cleanly to a number like SLOC, but cannot be ignored for the burden
+it can create on the user.
+
+
 \begin{figure}[t]
 \begin{tikzpicture}
 \centering
@@ -245,7 +279,7 @@ The second takes the code the was able to be parallelized using our method and c
 \addplot 
 	coordinates {(Mandelbrot,23)(PESS,241)(KMeans,128)};
 \addplot
-    coordinates {(Mandelbrot,32)(PESS,254)(KMeans,137)};
+    coordinates {(Mandelbrot,32)(PESS,276)(KMeans,137)};
     
 \legend{Serial,ParForPy, Manual Parallelism}
 \end{axis}
@@ -341,7 +375,15 @@ In general, this case of parallelizing a large amount of independent tasks seems
     coordinates {
     (1,1)(2,1.95)(3,2.89)(4,3.75)(5,4.48)(6,5.30)(7,6.11)(8,6.83)(9,7.75)(10,8.73)(11,8.99)(12,8.80)
    };
-     \legend{Protein Folding, Mandelbrot, }
+   
+    \addplot[
+     color=green,
+     mark=triangle
+     ]
+     coordinates {
+     (1,1)(2,1.6)(3,2.17)(4,2.33)(5,2.48)(6,2.6)(7,2.73)(8,2.89)(9,3.01)(10,3.01)(11,2.8)(12,2.85)    
+     };
+     \legend{Protein Folding, Mandelbrot, K-Means}
      
 \end{axis}
 \end{tikzpicture}
@@ -352,9 +394,49 @@ In general, this case of parallelizing a large amount of independent tasks seems
 
 \subsection{Naive Bayes Classification}
 
+Naive Bayes is a supervised machine learning model, based on Bayes Theorem. 
+In supervised learning,
+the programmer trains the model by representing each data point as a series of features.
+The model then associates different features to different degrees with the label given for 
+each data point.
 
-%\subsubsection{Perceptron}
+Specifically, Naive Bayes counts up the occurrences of each feature associated with a each label. 
+Then, when a new data point is to be classified the model uses the data it has seen before and applies Bayes' Rule:
 
+\begin{equation}
+    \Pr(A|B)=\frac{\Pr(B|A)\Pr(A)}{\Pr(B)}
+\end{equation}
+
+The Naive in Naive Bayes refers to the simplifying assumption that the different features
+are independent of one another. 
+For instance, if we had a sentence "the boy went home", the occurrence of "the" would 
+have no impact on the probability of "boy" appearing next. 
+This simplifying assumption allows us to then simply count up the individual occurrences
+of each feature with each label and use this to build a probability of each label occuring
+for each label.
+
+
+NOT DONE
+
+%There can be significant noise and overlap between the features of different labels. 
+%The goal is to uncover enough correlation during learning that we can correctly 
+%label previously unseen data.
+
+
+
+
+This and the following machine learning algorithms were training used the 20 Newsgroup corpus\cite{20Newsgroup}.
+This corpus is a collection of postings to 20 different newsgroup in the early to late
+90s.
+It is a common corpus, that is used for a variety of supervised and unsupervised learning
+training.
+For Naive Bayes the associated newsgroup was used as the label, and the task becomes to
+correctly identify which newsgroup a given text came from.
+
+
+\subsection{Perceptron}
+
+PLACEHOLDER
 
 \subsection{K-Means Clustering}
 
@@ -389,6 +471,8 @@ independently of one another.
 
 Testing was done using the Newsgroup20 corpus, and each document was represented as a 
 vector of word counts.
+The task then becomes to see if the unsupervised clusters can group documents
+along the original newsgroup sources.
 Figure \ref{SpeedUpResults} shows speed-up as number of processes was increased.
 Compared to the Mandlebrot and Protein Folding codes K-means sees less improvement from parallelization.
 With those two we have a fair amount of computation that is divided among the subprocesses once.
@@ -404,6 +488,8 @@ this action.
 This particularly impacts scaling, as communication across more processes adds more and
 more overhead dampening the possible runtime improvements as the number of processes used
 increases.
+In this case we ultimately see the improvment falling off hard, gaining only 3.01x speed-up at 10 processes. 
+It begins to fall off thereafter as communication costs begin to overcome possible gains.
 
 \section{Related Work}
 
